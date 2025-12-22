@@ -3,7 +3,7 @@ import pandas as pd
 
 
 class MyLineReg():
-    def __init__(self, n_iter, learning_rate, weights=None):
+    def __init__(self, n_iter, learning_rate, weights: pd.Series = None):  # type: ignore
         self.n_inter = n_iter
         self.learning_rate = learning_rate
         self.weights = weights
@@ -30,6 +30,11 @@ class MyLineReg():
 
             if (verbose > 0 and step % verbose == 0):
                 print(f'start | ${self._loss_function(y, X.dot(weights))}')
+
+    def predict(self, X: pd.DataFrame) -> float:
+        X.insert(0, 'x0', 1)
+        predicted_values = X.dot(self.weights)
+        return sum(predicted_values)
 
     def get_coef(self):
         return self.weights.values[1:]
