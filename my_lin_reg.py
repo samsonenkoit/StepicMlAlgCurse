@@ -1,10 +1,9 @@
-import pandas
-import numpy
-from typing import Union, Literal
+import numpy as np
+import pandas as pd
 
 
 class MyLineReg():
-    def __init__(self, n_iter, learning_rate, weights):
+    def __init__(self, n_iter, learning_rate, weights=None):
         self.n_inter = n_iter
         self.learning_rate = learning_rate
         self.weights = weights
@@ -12,10 +11,10 @@ class MyLineReg():
     def __str__(self):
         return f"MyLineReg class: n_iter={self.n_inter}, learning_rate={self.learning_rate}"
 
-    def fit(self, X, y, verbose):
+    def fit(self, X: pd.DataFrame, y: pd.Series, verbose):
         X.insert(0, 'x0', 1)
 
-        weights = pandas.Series(numpy.ones(X.shape[1]))
+        weights = pd.Series(np.ones(X.shape[1]), index=X.columns)
 
         features_count = X.shape[0]
 
@@ -35,6 +34,6 @@ class MyLineReg():
     def get_coef(self):
         return self.weights.values[1:]
 
-    def _loss_function(self, y, predicted):
+    def _loss_function(self, y: pd.Series, predicted):
         mse = sum(((predicted - y) ** 2).div(y.shape[0]))
         return mse
