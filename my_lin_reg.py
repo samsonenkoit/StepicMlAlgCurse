@@ -19,7 +19,7 @@ class MyLineReg():
         features_count = X.shape[0]
 
         if (verbose > 0):
-            print(f'start | ${self._loss_function(y, X.dot(weights))}')
+            print(f'start | ${self._mse_loss_function(y, X.dot(weights))}')
 
         for step in range(self.n_inter):
             predicted_values = X.dot(weights)
@@ -29,7 +29,7 @@ class MyLineReg():
             self.weights = weights
 
             if (verbose > 0 and step % verbose == 0):
-                print(f'start | ${self._loss_function(y, X.dot(weights))}')
+                print(f'start | ${self._mse_loss_function(y, X.dot(weights))}')
 
     def predict(self, X: pd.DataFrame) -> float:
         X.insert(0, 'x0', 1)
@@ -39,6 +39,6 @@ class MyLineReg():
     def get_coef(self):
         return self.weights.values[1:]
 
-    def _loss_function(self, y: pd.Series, predicted):
-        mse = sum(((predicted - y) ** 2).div(y.shape[0]))
-        return mse
+    def _mse_loss_function(self, y: pd.Series, predicted: pd.Series):
+        val = sum(((predicted - y) ** 2).div(y.shape[0]))
+        return val
