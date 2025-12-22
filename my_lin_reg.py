@@ -94,4 +94,4 @@ class MyLineReg():
 
     @staticmethod
     def _mape(y: pd.Series, predicted: pd.Series) -> float:
-        return sum(abs(y - predicted) / y) * (100/len(y))
+        return sum(abs((y - predicted) / y)) * (100/len(y))
