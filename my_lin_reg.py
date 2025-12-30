@@ -56,7 +56,7 @@ class MyLineReg():
     def get_coef(self):
         return self.weights.values[1:]
 
-    def _grad(self, y: pd.Series, X: pd.DataFrame, wg: pd.Series) -> pd.DataFrame:
+    def _grad(self, y: pd.Series, X: pd.DataFrame, wg: pd.Series) -> pd.Series:
         features_count = X.shape[0]
 
         predicted_values = X.dot(wg)
@@ -155,7 +155,7 @@ class MyLineReg():
 
     @staticmethod
     def _l1(vec: pd.Series) -> float:
-        return sum(vec.apply(abs))
+        return sum(vec.apply(lambda x: abs(x)))
 
     @staticmethod
     def _l1_der(vec: pd.Series) -> pd.Series:
