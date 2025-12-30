@@ -31,10 +31,10 @@ class MyLineReg():
             self._print_education_score(
                 y, X, weights, verbose, 'start', self.metric)
 
-        for step in range(self.n_inter):
+        for step in range(1, self.n_inter + 1):
             mseGrad = self._grad(y, X, weights)
 
-            weights += mseGrad.mul(-1).mul(self.learning_rate)
+            weights += mseGrad.mul(-1).mul(self._get_learning_rate(step))
             self.weights = weights
 
             if (verbose > 0 and step % verbose == 0):
@@ -55,6 +55,12 @@ class MyLineReg():
 
     def get_coef(self):
         return self.weights.values[1:]
+
+    def _get_learning_rate(self, iter_step: int) -> float:
+        if callable(self.learning_rate):
+            return self.learning_rate(iter_step)  # type: ignore
+        else:
+            return self.learning_rate
 
     def _grad(self, y: pd.Series, X: pd.DataFrame, wg: pd.Series) -> pd.Series:
         features_count = X.shape[0]
