@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import random
 
 
 class MyLineReg():
@@ -10,7 +11,9 @@ class MyLineReg():
                  metric: str = None,  # type: ignore
                  reg: str = None,  # type: ignore
                  l1_coef: float = 0,
-                 l2_coef: float = 0):
+                 l2_coef: float = 0,
+                 sgd_sample: float = None,
+                 random_state: int = 42):
         self.n_inter = n_iter
         self.learning_rate = learning_rate
         self.weights = weights
@@ -18,11 +21,15 @@ class MyLineReg():
         self.reg = reg
         self.l1_coef = l1_coef
         self.l2_coef = l2_coef
+        self.sgd_sample = sgd_sample
+        self.random_state = random_state
 
     def __str__(self):
         return f"MyLineReg class: n_iter={self.n_inter}, learning_rate={self.learning_rate}"
 
     def fit(self, X: pd.DataFrame, y: pd.Series, verbose):
+        random.seed(self.random_state)
+
         X.insert(0, 'x0', 1)
 
         weights = pd.Series(np.ones(X.shape[1]), index=X.columns)
@@ -56,6 +63,20 @@ class MyLineReg():
     def get_coef(self):
         return self.weights.values[1:]
 
+    def _get_learn_dataset_indexes(self, dataset_len: int):
+        dataset_indexes = list(range(0, dataset_len))
+        if not self.sgd_sample:
+            return dataset_indexes
+
+        sample_count = 1
+        if self.sgd_sample < 1:
+            sample_count = int(max(1, dataset_len * self.sgd_sample))
+        else:
+            sample_count = int(self.sgd_sample)
+
+        dataset_indexes = random.sample(dataset_indexes, sample_count)
+        return dataset_indexes
+
     def _get_learning_rate(self, iter_step: int) -> float:
         if callable(self.learning_rate):
             return self.learning_rate(iter_step)  # type: ignore
@@ -63,10 +84,16 @@ class MyLineReg():
             return self.learning_rate
 
     def _grad(self, y: pd.Series, X: pd.DataFrame, wg: pd.Series) -> pd.Series:
-        features_count = X.shape[0]
+        step_learn_rows_indexes = self._get_learn_dataset_indexes(X.shape[0])
 
-        predicted_values = X.dot(wg)
-        mseGrad = (predicted_values - y).dot(X).mul(2).div(features_count)
+        x_buff = X.iloc[step_learn_rows_indexes]
+        y_buff = y.iloc[step_learn_rows_indexes]
+
+        features_count = x_buff.shape[0]
+
+        predicted_values = x_buff.dot(wg)
+        mseGrad = (predicted_values -
+                   y_buff).dot(x_buff).mul(2).div(features_count)
 
         if self.reg:
             mseGrad += self._regularization_der(self.reg, wg)
