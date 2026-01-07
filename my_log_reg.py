@@ -4,6 +4,8 @@ import random
 
 class MyLogReg():
 
+    _eps = 1e-15
+
     def __init__(self, n_iter: int = 10,
                  learning_rate: float = 0.1,
                  weight: pd.Series = None): # type: ignore
@@ -27,3 +29,8 @@ class MyLogReg():
     
     @staticmethod
     def _logloss(y: pd.Series, y_predicted: pd.Series):
+        y_predicted.apply(MyLogReg._sigmoid)
+
+    @staticmethod
+    def _sigmoid(val: float) -> float:
+        return 1 / (1 + np.exp(-val))
