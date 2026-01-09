@@ -63,7 +63,7 @@ class MyLogReg():
 
     @staticmethod
     def _logloss_derivative(y: pd.Series, y_predicted: pd.Series, X: pd.DataFrame) -> pd.Series:
-        return (y_predicted - y).dot(X) / y.shape[0]
+        return (y_predicted.apply(MyLogReg._sigmoid) - y).dot(X) / y.shape[0]
 
     @staticmethod
     def _sigmoid(val: float) -> float:
