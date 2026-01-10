@@ -4,6 +4,7 @@ import numpy as np
 
 class MyLogReg():
 
+    _first_feature_col_name = 'fr'
     _eps = 1e-15
 
     def __init__(self, n_iter: int = 10,
@@ -17,7 +18,8 @@ class MyLogReg():
         return f"MyLogReg class: n_iter={self.n_inter}, learning_rate={self.learning_rate}"
 
     def fit(self, X: pd.DataFrame, y: pd.Series, verbose):
-        X.insert(0, 'x0', 1)
+        X = X.copy()
+        X.insert(0, MyLogReg._first_feature_col_name, 1)
         weights = pd.Series(np.ones(X.shape[1]), index=X.columns)
 
         self._print_education_score_if_need(
@@ -29,6 +31,18 @@ class MyLogReg():
             self.weights = weights
 
             self._print_education_score_if_need(y, X, weights, verbose, step)
+
+    def predict_proba(self, X: pd.DataFrame):
+        X = X.copy()
+        X.insert(0, MyLogReg._first_feature_col_name, 1)
+        predicted = X.dot(self.weights)
+        predicted = predicted.apply(MyLogReg._sigmoid)
+        return predicted
+
+    def predict(self, X: pd.DataFrame):
+        predicted = self.predict_proba(X)
+        predicted = predicted.apply(lambda x: 1 if x > 0.5 else 0)
+        return predicted
 
     def get_coef(self):
         return self.weights.values[1:]
