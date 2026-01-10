@@ -4,7 +4,7 @@ import numpy as np
 
 class MyLogReg():
 
-    _first_feature_col_name = 'fr'
+    _first_feature_col_name = 'x0'
     _eps = 1e-15
 
     def __init__(self, n_iter: int = 10,
