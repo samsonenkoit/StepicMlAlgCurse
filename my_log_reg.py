@@ -67,9 +67,12 @@ class MyLogReg():
         y_predicted = X.dot(wg)
         return MyLogReg._logloss(y, y_predicted)
 
-    def _calculate_metric(self, metric: str, y: pd.Series, y_predicted_score: pd.Series,) -> float:
+    def _calculate_metric(self, metric: str, y: pd.Series, X: pd.DataFrame) -> float:
         if not metric:
             raise ValueError('metric')
+
+        if metric == 'roc_auc':
+            y_predicted_score = self.predict_proba(X)
 
         metrics = {
             'accuracy': MyLogReg._metric_accuracy,
@@ -78,7 +81,7 @@ class MyLogReg():
             'f1': MyLogReg._metric_f1
         }
 
-        y_predicted_class =
+        y_predicted_class = self.predict(X)
         return metrics[metric](y, y_predicted_class)
 
     @staticmethod
