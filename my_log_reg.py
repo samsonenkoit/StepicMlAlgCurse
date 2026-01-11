@@ -67,6 +67,60 @@ class MyLogReg():
         y_predicted = X.dot(wg)
         return MyLogReg._logloss(y, y_predicted)
 
+    def _calculate_metric(self, metric: str, y: pd.Series, y_predicted_score: pd.Series,) -> float:
+        if not metric:
+            raise ValueError('metric')
+
+        metrics = {
+            'accuracy': MyLogReg._metric_accuracy,
+            'precision': MyLogReg._metric_precision,
+            'recall': MyLogReg._metric_recall,
+            'f1': MyLogReg._metric_f1
+        }
+
+        y_predicted_class =
+        return metrics[metric](y, y_predicted_class)
+
+    @staticmethod
+    def _metric_f1(y: pd.Series, y_predicted: pd.Series) -> float:
+        precision = MyLogReg._metric_precision(y, y_predicted)
+        recall = MyLogReg._metric_recall(y, y_predicted)
+
+        return 2 * (precision * recall) / (precision + recall)
+
+    @staticmethod
+    def _metric_accuracy(y: pd.Series, y_predicted: pd.Series) -> float:
+        tp = MyLogReg._true_positive(y, y_predicted)
+        tn = MyLogReg._true_negative(y, y_predicted)
+
+        return (tp + tn) / (tp + tn + MyLogReg._false_positive(y, y_predicted) + MyLogReg._false_negative(y, y_predicted))
+
+    @staticmethod
+    def _metric_precision(y: pd.Series, y_predicted: pd.Series) -> float:
+        tp = MyLogReg._true_positive(y, y_predicted)
+        return tp / (tp + MyLogReg._false_positive(y, y_predicted))
+
+    @staticmethod
+    def _metric_recall(y: pd.Series, y_predicted: pd.Series) -> float:
+        tp = MyLogReg._true_positive(y, y_predicted)
+        return tp / (tp + MyLogReg._false_negative(y, y_predicted))
+
+    @staticmethod
+    def _true_positive(y: pd.Series, y_predicted: pd.Series) -> int:
+        return (y & y_predicted).sum()
+
+    @staticmethod
+    def _true_negative(y: pd.Series, y_predicted: pd.Series) -> int:
+        return ((y == 0) & (y_predicted == 0)).sum()
+
+    @staticmethod
+    def _false_positive(y: pd.Series, y_predicted: pd.Series) -> int:
+        return ((y_predicted == 1) & (y == 0)).sum()
+
+    @staticmethod
+    def _false_negative(y: pd.Series, y_predicted: pd.Series) -> int:
+        return ((y_predicted == 0) & (y == 1)).sum()
+
     @staticmethod
     def _logloss(y: pd.Series, y_predicted: pd.Series) -> float:
         y_predicted = y_predicted.apply(MyLogReg._sigmoid)
