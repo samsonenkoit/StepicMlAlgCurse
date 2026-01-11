@@ -9,10 +9,13 @@ class MyLogReg():
 
     def __init__(self, n_iter: int = 10,
                  learning_rate: float = 0.1,
-                 weights: pd.Series = None):  # type: ignore
+                 weights: pd.Series = None,  # type: ignore
+                 metric: str = None):  # type: ignore
         self.n_inter = n_iter
         self.learning_rate = learning_rate
         self.weights = weights
+        self.metric = metric
+        self._best_score = None
 
     def __str__(self):
         return f"MyLogReg class: n_iter={self.n_inter}, learning_rate={self.learning_rate}"
@@ -30,11 +33,17 @@ class MyLogReg():
             weights += grad * -1 * self.learning_rate
             self.weights = weights
 
+            if self.metric:
+                self._best_score = self._calculate_metric(y, X)
+
             self._print_education_score_if_need(y, X, weights, verbose, step)
 
     def predict_proba(self, X: pd.DataFrame):
         X = X.copy()
-        X.insert(0, MyLogReg._first_feature_col_name, 1)
+
+        if MyLogReg._first_feature_col_name not in X.columns:
+            X.insert(0, MyLogReg._first_feature_col_name, 1)
+
         predicted = X.dot(self.weights)
         predicted = predicted.apply(MyLogReg._sigmoid)
         return predicted
@@ -47,7 +56,10 @@ class MyLogReg():
     def get_coef(self):
         return self.weights.values[1:]
 
-    def _print_education_score_if_need(self, y: pd.Series,  X: pd.DataFrame, wg: pd.Series, verbose, step, metric: str = None):
+    def get_best_score(self):
+        return self._best_score
+
+    def _print_education_score_if_need(self, y: pd.Series,  X: pd.DataFrame, wg: pd.Series, verbose, step):
         if not verbose:
             return
 
@@ -55,6 +67,9 @@ class MyLogReg():
             return
 
         prnt_str = f'{step}|loss {self._loss(X, y, wg)}'
+
+        if self.metric:
+            prnt_str += f'|{self.metric}: {self._best_score}'
 
         print(prnt_str)
 
@@ -67,12 +82,14 @@ class MyLogReg():
         y_predicted = X.dot(wg)
         return MyLogReg._logloss(y, y_predicted)
 
-    def _calculate_metric(self, metric: str, y: pd.Series, X: pd.DataFrame) -> float:
-        if not metric:
+    def _calculate_metric(self, y: pd.Series, X: pd.DataFrame) -> float:
+        if not self.metric:
             raise ValueError('metric')
 
-        if metric == 'roc_auc':
+        if self.metric == 'roc_auc':
             y_predicted_score = self.predict_proba(X)
+            y_predicted_score = y_predicted_score.round(10)
+            return MyLogReg._metric_roc_auc(y, y_predicted_score)
 
         metrics = {
             'accuracy': MyLogReg._metric_accuracy,
@@ -82,7 +99,7 @@ class MyLogReg():
         }
 
         y_predicted_class = self.predict(X)
-        return metrics[metric](y, y_predicted_class)
+        return metrics[self.metric](y, y_predicted_class)
 
     @staticmethod
     def _metric_f1(y: pd.Series, y_predicted: pd.Series) -> float:
@@ -90,6 +107,32 @@ class MyLogReg():
         recall = MyLogReg._metric_recall(y, y_predicted)
 
         return 2 * (precision * recall) / (precision + recall)
+
+    @staticmethod
+    def _metric_roc_auc(y: pd.Series, y_predicted_score: pd.Series) -> float:
+        df = pd.DataFrame({
+            'score': y_predicted_score,
+            'cls': y
+        })
+
+        df = df.sort_values(['score', 'cls'], ascending=[False, False])
+
+        positive_counter_upper_score = 0
+        roc_auc = 0
+        current_score = -1
+        positive_counter_current_score = 0
+        for index, row in df.iterrows():
+            if row.score != current_score:
+                positive_counter_upper_score += positive_counter_current_score
+                positive_counter_current_score = 0
+                current_score = row.score
+
+            if row.cls == 1:
+                positive_counter_current_score += 1
+            else:
+                roc_auc += positive_counter_upper_score + positive_counter_current_score / 2
+
+        return (1 / ((y == 1).sum() * (y == 0).sum())) * roc_auc
 
     @staticmethod
     def _metric_accuracy(y: pd.Series, y_predicted: pd.Series) -> float:

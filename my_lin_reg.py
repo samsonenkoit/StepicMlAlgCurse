@@ -12,7 +12,7 @@ class MyLineReg():
                  reg: str = None,  # type: ignore
                  l1_coef: float = 0,
                  l2_coef: float = 0,
-                 sgd_sample: float = None,
+                 sgd_sample: float = None,  # type: ignore
                  random_state: int = 42):
         self.n_inter = n_iter
         self.learning_rate = learning_rate
