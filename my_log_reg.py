@@ -10,12 +10,18 @@ class MyLogReg():
     def __init__(self, n_iter: int = 10,
                  learning_rate: float = 0.1,
                  weights: pd.Series = None,  # type: ignore
-                 metric: str = None):  # type: ignore
+                 metric: str = None,  # type: ignore
+                 reg: str = None,  # type: ignore
+                 l1_coef: float = 0,
+                 l2_coef: float = 0,):  # type: ignore
         self.n_inter = n_iter
         self.learning_rate = learning_rate
         self.weights = weights
         self.metric = metric
         self._best_score = None
+        self.reg = reg
+        self.l1_coef = l1_coef
+        self.l2_coef = l2_coef
 
     def __str__(self):
         return f"MyLogReg class: n_iter={self.n_inter}, learning_rate={self.learning_rate}"
@@ -76,11 +82,20 @@ class MyLogReg():
     def _grad(self, y: pd.Series, X: pd.DataFrame, wg: pd.Series) -> pd.Series:
         y_predicted = X.dot(wg)
         grad = MyLogReg._logloss_derivative(y, y_predicted, X)
+
+        if self.reg:
+            grad += self._regularization_der(self.reg, wg)
+
         return grad
 
     def _loss(self, X: pd.DataFrame, y: pd.Series, wg: pd.Series) -> float:
         y_predicted = X.dot(wg)
-        return MyLogReg._logloss(y, y_predicted)
+        loss = MyLogReg._logloss(y, y_predicted)
+
+        if (self.reg):
+            loss += self._regularization(self.reg, wg)
+
+        return loss
 
     def _calculate_metric(self, y: pd.Series, X: pd.DataFrame) -> float:
         if not self.metric:
@@ -100,6 +115,26 @@ class MyLogReg():
 
         y_predicted_class = self.predict(X)
         return metrics[self.metric](y, y_predicted_class)
+
+    def _regularization_der(self, reg: str, vec: pd.Series) -> pd.Series:
+        if reg == 'l1':
+            return MyLogReg._l1_der(vec)*self.l1_coef
+        elif reg == 'l2':
+            return MyLogReg._l2_der(vec)*self.l2_coef
+        elif reg == 'elasticnet':
+            return MyLogReg._elastic_net_der(vec, self.l1_coef, self.l2_coef)
+        else:
+            raise ValueError()
+
+    def _regularization(self, reg: str, vec: pd.Series) -> float:
+        if reg == 'l1':
+            return MyLogReg._l1(vec)*self.l1_coef
+        elif reg == 'l2':
+            return MyLogReg._l2(vec)*self.l2_coef
+        elif reg == 'elasticnet':
+            return MyLogReg._elastic_net(vec, self.l1_coef, self.l2_coef)
+        else:
+            raise ValueError()
 
     @staticmethod
     def _metric_f1(y: pd.Series, y_predicted: pd.Series) -> float:
@@ -182,3 +217,36 @@ class MyLogReg():
     @staticmethod
     def _sigmoid(val: float) -> float:
         return 1 / (1 + np.exp(-val))
+
+    @staticmethod
+    def _l1(vec: pd.Series) -> float:
+        return sum(vec.apply(lambda x: abs(x)))
+
+    @staticmethod
+    def _l1_der(vec: pd.Series) -> pd.Series:
+        return vec.apply(MyLogReg._sgn)
+
+    @staticmethod
+    def _l2(vec: pd.Series) -> float:
+        return sum(vec ** 2)
+
+    @staticmethod
+    def _l2_der(vec: pd.Series) -> pd.Series:
+        return 2 * vec
+
+    @staticmethod
+    def _elastic_net(vec: pd.Series, l1_coef: float, l2_coef: float) -> float:
+        return MyLogReg._l1(vec) * l1_coef + MyLogReg._l2(vec) * l2_coef
+
+    @staticmethod
+    def _elastic_net_der(vec: pd.Series, l1_coef: float, l2_coef: float) -> pd.Series:
+        return l1_coef * MyLogReg._l1_der(vec) + l2_coef * MyLogReg._l2_der(vec)
+
+    @staticmethod
+    def _sgn(num: float):
+        if num < 0:
+            return -1
+        elif num > 0:
+            return 1
+        else:
+            return 0
