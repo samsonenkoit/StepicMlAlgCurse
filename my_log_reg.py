@@ -7,8 +7,9 @@ class MyLogReg():
     _first_feature_col_name = 'x0'
     _eps = 1e-15
 
-    def __init__(self, n_iter: int = 10,
-                 learning_rate: float = 0.1,
+    def __init__(self,
+                 learning_rate,
+                 n_iter: int = 10,
                  weights: pd.Series = None,  # type: ignore
                  metric: str = None,  # type: ignore
                  reg: str = None,  # type: ignore
@@ -34,9 +35,9 @@ class MyLogReg():
         self._print_education_score_if_need(
             y, X, weights, verbose, 'start')
 
-        for step in range(0, self.n_inter):
+        for step in range(1, self.n_inter + 1):
             grad = self._grad(y, X, weights)
-            weights += grad * -1 * self.learning_rate
+            weights += grad * -1 * self._get_learning_rate(step)
             self.weights = weights
 
             if self.metric:
@@ -64,6 +65,12 @@ class MyLogReg():
 
     def get_best_score(self):
         return self._best_score
+
+    def _get_learning_rate(self, iter_step: int) -> float:
+        if callable(self.learning_rate):
+            return self.learning_rate(iter_step)  # type: ignore
+        else:
+            return self.learning_rate
 
     def _print_education_score_if_need(self, y: pd.Series,  X: pd.DataFrame, wg: pd.Series, verbose, step):
         if not verbose:
