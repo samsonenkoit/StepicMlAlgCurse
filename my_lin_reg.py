@@ -87,7 +87,8 @@ class MyLineReg():
         step_learn_rows_indexes = self._get_learn_dataset_indexes(X.shape[0])
 
         x_buff = X.iloc[step_learn_rows_indexes]
-        y_buff = y.iloc[step_learn_rows_indexes]
+        y_buff = pd.Series(
+            y.values[step_learn_rows_indexes], index=y.index[step_learn_rows_indexes])
 
         features_count = x_buff.shape[0]
 

@@ -1,3 +1,4 @@
+import random
 import pandas as pd
 import numpy as np
 
@@ -14,7 +15,9 @@ class MyLogReg():
                  metric: str = None,  # type: ignore
                  reg: str = None,  # type: ignore
                  l1_coef: float = 0,
-                 l2_coef: float = 0,):  # type: ignore
+                 l2_coef: float = 0,
+                 sgd_sample: float = None,  # type: ignore
+                 random_state: int = 42):  # type: ignore
         self.n_inter = n_iter
         self.learning_rate = learning_rate
         self.weights = weights
@@ -23,11 +26,15 @@ class MyLogReg():
         self.reg = reg
         self.l1_coef = l1_coef
         self.l2_coef = l2_coef
+        self.sgd_sample = sgd_sample
+        self.random_state = random_state
 
     def __str__(self):
         return f"MyLogReg class: n_iter={self.n_inter}, learning_rate={self.learning_rate}"
 
     def fit(self, X: pd.DataFrame, y: pd.Series, verbose):
+        random.seed(self.random_state)
+
         X = X.copy()
         X.insert(0, MyLogReg._first_feature_col_name, 1)
         weights = pd.Series(np.ones(X.shape[1]), index=X.columns)
@@ -66,6 +73,20 @@ class MyLogReg():
     def get_best_score(self):
         return self._best_score
 
+    def _get_learn_dataset_indexes(self, dataset_len: int):
+        dataset_indexes = list(range(0, dataset_len))
+        if not self.sgd_sample:
+            return dataset_indexes
+
+        sample_count = 1
+        if self.sgd_sample < 1:
+            sample_count = int(max(1, dataset_len * self.sgd_sample))
+        else:
+            sample_count = int(self.sgd_sample)
+
+        dataset_indexes = random.sample(dataset_indexes, sample_count)
+        return dataset_indexes
+
     def _get_learning_rate(self, iter_step: int) -> float:
         if callable(self.learning_rate):
             return self.learning_rate(iter_step)  # type: ignore
@@ -87,8 +108,14 @@ class MyLogReg():
         print(prnt_str)
 
     def _grad(self, y: pd.Series, X: pd.DataFrame, wg: pd.Series) -> pd.Series:
-        y_predicted = X.dot(wg)
-        grad = MyLogReg._logloss_derivative(y, y_predicted, X)
+        step_learn_rows_indexes = self._get_learn_dataset_indexes(X.shape[0])
+
+        x_buff = X.iloc[step_learn_rows_indexes]
+        y_buff = pd.Series(
+            y.values[step_learn_rows_indexes], index=y.index[step_learn_rows_indexes])
+
+        y_predicted = x_buff.dot(wg)
+        grad = MyLogReg._logloss_derivative(y_buff, y_predicted, x_buff)
 
         if self.reg:
             grad += self._regularization_der(self.reg, wg)
