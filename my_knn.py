@@ -5,9 +5,11 @@ import numpy as np
 
 class MyKNNClf():
     def __init__(self, k: int = 3,
-                 train_size=None) -> None:
+                 train_size=None,
+                 metric: str = 'euclidean') -> None:
         self.k = k
         self.train_size = train_size
+        self.metric = metric
 
     def __str__(self) -> str:
         return f'MyKNNClf class: k={self.k}'
@@ -34,8 +36,34 @@ class MyKNNClf():
         distances = []
 
         for index, row in self.X.iterrows():
-            distance = np.sqrt(np.sum((row - item) ** 2))
+            distance = self._get_metric(row, item)
             distances.append((index, distance))
 
         distances.sort(key=lambda x: x[1])
         return distances[:self.k]
+
+    def _get_metric(self, a: pd.Series, b: pd.Series):
+        funcDict = {
+            'euclidean': self._metric_euclidean,
+            'manhattan': self._metric_manhattan,
+            'chebyshev': self._metric_chebyshev,
+            'cosine': self._metric_cosine
+        }
+
+        return funcDict[self.metric](a, b)
+
+    @staticmethod
+    def _metric_euclidean(a: pd.Series, b: pd.Series) -> float:
+        return np.sqrt(np.sum((a - b) ** 2))
+
+    @staticmethod
+    def _metric_manhattan(a: pd.Series, b: pd.Series) -> float:
+        return (a - b).abs().sum()
+
+    @staticmethod
+    def _metric_chebyshev(a: pd.Series, b: pd.Series) -> float:
+        return (a - b).abs().max()
+
+    @staticmethod
+    def _metric_cosine(a: pd.Series, b: pd.Series) -> float:
+        return 1 - (a.dot(b)) / (np.sqrt(a.dot(a)) * np.sqrt(b.dot(b)))
