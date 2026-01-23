@@ -15,3 +15,6 @@ class MyKNNReg():
         self.X = X
         self.y = y
         self.train_size = (X.shape[0], X.shape[1])
+
+    def predict(self, X: pd.DataFrame):
+        for _, row in X.iterrows():
