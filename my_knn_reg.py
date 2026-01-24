@@ -4,9 +4,10 @@ import numpy as np
 
 
 class MyKNNReg():
-    def __init__(self, train_size=None, k=3) -> None:
+    def __init__(self, train_size=None, k=3, metric: str = 'euclidean') -> None:
         self.k = k
         self.train_size = train_size
+        self.metric = metric
 
     def __str__(self) -> str:
         return f'MyKNNReg class: k={self.k}'
@@ -19,10 +20,40 @@ class MyKNNReg():
     def predict(self, X: pd.DataFrame):
         predicts = []
         for _, row in X.iterrows():
-            distances = ((self.X - row) ** 2).sum(axis=1) ** 0.5
-            distances = distances.sort_values(ascending=True).iloc[:self.k]
-            vals = self.y[distances.index]
-            predicts.append(vals.mean())
+            distances = []
+            for index, source_row in self.X.iterrows():
+                distances.append((index, self._get_metric(row, source_row)))
+            
+            distances.sort(key= lambda x: x[1], reverse=False)
+            distances = distances[:self.k]
+            vals = [self.y[i[0]] for i in distances]
+            predicts.append(np.mean(vals))
         
         return pd.Series(predicts)
+    
+    def _get_metric(self, a: pd.Series, b: pd.Series):
+        funcDict = {
+            'euclidean': self._metric_euclidean,
+            'manhattan': self._metric_manhattan,
+            'chebyshev': self._metric_chebyshev,
+            'cosine': self._metric_cosine
+        }
+
+        return funcDict[self.metric](a, b)
+
+    @staticmethod
+    def _metric_euclidean(a: pd.Series, b: pd.Series) -> float:
+        return np.sqrt(np.sum((a - b) ** 2))
+
+    @staticmethod
+    def _metric_manhattan(a: pd.Series, b: pd.Series) -> float:
+        return (a - b).abs().sum()
+
+    @staticmethod
+    def _metric_chebyshev(a: pd.Series, b: pd.Series) -> float:
+        return (a - b).abs().max()
+
+    @staticmethod
+    def _metric_cosine(a: pd.Series, b: pd.Series) -> float:
+        return 1 - (a.dot(b)) / (np.sqrt(a.dot(a)) * np.sqrt(b.dot(b)))
 
