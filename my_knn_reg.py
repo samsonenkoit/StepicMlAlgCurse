@@ -17,4 +17,12 @@ class MyKNNReg():
         self.train_size = (X.shape[0], X.shape[1])
 
     def predict(self, X: pd.DataFrame):
+        predicts = []
         for _, row in X.iterrows():
+            distances = ((self.X - row) ** 2).sum(axis=1) ** 0.5
+            distances = distances.sort_values(ascending=True).iloc[:self.k]
+            vals = self.y[distances.index]
+            predicts.append(vals.mean())
+        
+        return pd.Series(predicts)
+
