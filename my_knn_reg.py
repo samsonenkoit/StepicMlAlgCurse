@@ -4,10 +4,11 @@ import numpy as np
 
 
 class MyKNNReg():
-    def __init__(self, train_size=None, k=3, metric: str = 'euclidean') -> None:
+    def __init__(self, train_size=None, k=3, metric: str = 'euclidean', weight: str = 'uniform') -> None:
         self.k = k
         self.train_size = train_size
         self.metric = metric
+        self.weight = weight
 
     def __str__(self) -> str:
         return f'MyKNNReg class: k={self.k}'
@@ -25,12 +26,36 @@ class MyKNNReg():
                 distances.append((index, self._get_metric(row, source_row)))
             
             distances.sort(key= lambda x: x[1], reverse=False)
-            distances = distances[:self.k]
-            vals = [self.y[i[0]] for i in distances]
-            predicts.append(np.mean(vals))
+            predicts.append(self._get_predict(distances))
         
         return pd.Series(predicts)
     
+    def _get_predict(self, distances) -> float:
+        distances = list(distances[:self.k])
+        y_vals = [self.y[i[0]] for i in distances]
+
+        koef = []
+        if self.weight == 'uniform':
+            koef = list(np.ones(len(y_vals)))
+        elif self.weight == 'rank':
+            denominator = sum([1/n for n in range(1, len(distances) + 1)])
+            for index in range(1, len(distances) + 1):
+                koef.append((1/ index) / denominator)
+            
+        else:
+            denominator = sum([1/n[1] for n in distances])
+            for i in distances:
+                koef.append((1/i[1]) / denominator)
+        
+        vals = pd.Series(y_vals)
+        koef = pd.Series(koef)
+
+        if self.weight == 'uniform':
+            return (vals * koef).mean()
+        else:
+            return (vals * koef).sum()
+            
+
     def _get_metric(self, a: pd.Series, b: pd.Series):
         funcDict = {
             'euclidean': self._metric_euclidean,
