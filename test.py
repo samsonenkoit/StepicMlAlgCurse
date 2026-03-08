@@ -1,7 +1,15 @@
+from sklearn.datasets import fetch_openml
 import pandas as pd
-from my_log_reg import MyLogReg
+
+from my_tree_clf import MyTreeClf
+data = fetch_openml(name='banknote-authentication', version=1, as_frame=True)
+X = data.data
+y = data.target.astype(int)
 
 
-g = pd.DataFrame([[1, 2, 3], [4, 5, 6], [7, 6, 8]], columns=['x1', 'x2', 'x3'])
-print(g.sum(axis=1))
-t = 1
+tree = MyTreeClf(max_depth=5, min_samples_split=200, max_leafs=10)
+tree.fit(X, y)
+tree.print_tree()
+print(tree.leafs_sum)
+print(tree.leafs_cnt)
+g = 1
