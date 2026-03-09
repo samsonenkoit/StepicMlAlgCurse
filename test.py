@@ -12,4 +12,7 @@ tree.fit(X, y)
 tree.print_tree()
 print(tree.leafs_sum)
 print(tree.leafs_cnt)
-g = 1
+
+
+g = tree.predict_proba(X)
+g1 = 1

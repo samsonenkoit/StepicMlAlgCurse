@@ -17,6 +17,31 @@ class MyTreeClf():
     def __str__(self) -> str:
         return f'MyTreeClf class: max_depth={self.max_depth}, min_samples_split={self.min_samples_split}, max_leafs={self.max_leafs}'
 
+    def predict_proba(self, X: pd.DataFrame):
+        return sum(self._predict_proba(X))
+
+    def predict(self, X: pd.DataFrame):
+        return sum(self._predict(X))
+
+    def _predict_proba(self, X: pd.DataFrame):
+        predict = X.apply(lambda row: self._predict_proba_series(
+            row, self.fit_tree), axis=1)
+
+        return predict.to_list()
+
+    def _predict(self, X: pd.DataFrame):
+        predicted = self._predict_proba(X)
+
+        return [1 if x > 0.5 else 0 for x in predicted]
+
+    def _predict_proba_series(self, item: pd.Series, node: dict) -> float:
+        if node['type'] == 'leaf':
+            return float(node['probability'])
+        elif item[node['col']] > node['threshold']:
+            return self._predict_proba_series(item, node['right'])
+        else:
+            return self._predict_proba_series(item, node['left'])
+
     def fit(self, X: pd.DataFrame, y: pd.Series):
         self.fit_tree = self._fit(X, y, 0)
 
@@ -37,7 +62,7 @@ class MyTreeClf():
 
         if best_split[0] is None:
             self.leafs_cnt += 1
-            buff_p = (y == 2).sum() / len(y)
+            buff_p = (y == 1).sum() / len(y)
             self.leafs_sum += buff_p
             return {
                 'type': 'leaf',
@@ -62,7 +87,7 @@ class MyTreeClf():
         else:
             node['left'] = {
                 'type': 'leaf',
-                'probability': (y_left == 2).sum() / len(y_left)
+                'probability': (y_left == 1).sum() / len(y_left)
             }
             self.leafs_cnt += 1
             self.leafs_sum += node['left']['probability']
@@ -74,7 +99,7 @@ class MyTreeClf():
         else:
             node['right'] = {
                 'type': 'leaf',
-                'probability': (y_right == 2).sum() / len(y_right)
+                'probability': (y_right == 1).sum() / len(y_right)
             }
             self.leafs_cnt += 1
             self.leafs_sum += node['right']['probability']
