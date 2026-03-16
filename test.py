@@ -1,3 +1,4 @@
+import numpy
 from sklearn.datasets import fetch_openml
 import pandas as pd
 
@@ -5,9 +6,11 @@ from my_tree_clf import MyTreeClf
 data = fetch_openml(name='banknote-authentication', version=1, as_frame=True)
 X = data.data
 y = data.target.astype(int)
+y = y - 1
 
+items, thresholds = numpy.histogram(X[X.columns[0]], 3)
 
-tree = MyTreeClf(max_depth=5, min_samples_split=200, max_leafs=10)
+tree = MyTreeClf(max_depth=1, min_samples_split=1, max_leafs=2, bins=8)
 tree.fit(X, y)
 tree.print_tree()
 print(tree.leafs_sum)
