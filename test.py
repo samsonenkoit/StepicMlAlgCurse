@@ -10,7 +10,7 @@ y = y - 1
 
 items, thresholds = numpy.histogram(X[X.columns[0]], 3)
 
-tree = MyTreeClf(max_depth=1, min_samples_split=1, max_leafs=2, bins=8)
+tree = MyTreeClf(max_depth=5, min_samples_split=200, max_leafs=10, bins=4)
 tree.fit(X, y)
 tree.print_tree()
 print(tree.leafs_sum)

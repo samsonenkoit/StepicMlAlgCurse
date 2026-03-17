@@ -90,7 +90,7 @@ class MyTreeClf():
 
         current_depth += 1
 
-        self.potential_leafs_cnt += 2
+        self.potential_leafs_cnt = self.leafs_cnt + 2
         if self._can_continue_split(len(y_left), current_depth):
             node['left'] = self._fit(X[~mask], y_left, current_depth)
         else:
@@ -130,9 +130,10 @@ def get_thresholds(col, x_feature: pd.Series, bins, histogram_thresholds):
         max = x_feature.max()
         min = x_feature.min()
 
-        for th in thresholds:
-            if th > min and th < max:
-                return (thresholds, False)
+        thresholds = [th for th in thresholds if th >= min and th < max]
+
+        if len(thresholds) > 0:
+            return (thresholds, False)
 
         return (thresholds, True)
 
@@ -165,7 +166,7 @@ def get_best_split(X: pd.DataFrame, y: pd.Series, bins, histogram_thresholds):
             buff_entroy = s0 - (len(y_left) / len(y)) * _get_s_entropy(
                 y_left) - (len(y_right) / len(y)) * _get_s_entropy(y_right)
 
-            if buff_entroy > result_ig:
+            if buff_entroy >= result_ig:
                 result_ig = buff_entroy
                 result_col = col
                 result_split_value = threshold
