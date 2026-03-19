@@ -151,6 +151,10 @@ def get_best_split(X: pd.DataFrame, y: pd.Series, bins, histogram_thresholds):
     result_split_value = 0
     result_ig = 0
 
+    # значит остался только один класс и делить смысла нет.
+    if s0 == 0:
+        return (result_col, float(result_split_value), float(result_ig))
+
     for col in X.columns:
         thresholds_result = get_thresholds(
             col, X[col], bins, histogram_thresholds)
@@ -166,7 +170,7 @@ def get_best_split(X: pd.DataFrame, y: pd.Series, bins, histogram_thresholds):
             buff_entroy = s0 - (len(y_left) / len(y)) * _get_s_entropy(
                 y_left) - (len(y_right) / len(y)) * _get_s_entropy(y_right)
 
-            if buff_entroy >= result_ig:
+            if buff_entroy > result_ig:
                 result_ig = buff_entroy
                 result_col = col
                 result_split_value = threshold
