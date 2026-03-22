@@ -3,7 +3,7 @@ import numpy as np
 
 
 class MyTreeClf():
-    def __init__(self, max_depth: int, min_samples_split: int, max_leafs: int, bins) -> None:
+    def __init__(self, max_depth: int, min_samples_split: int, max_leafs: int, bins, criterion='entropy') -> None:
         self.max_depth = max_depth
         self.min_samples_split = min_samples_split
         self.max_leafs = max_leafs
@@ -15,6 +15,7 @@ class MyTreeClf():
         self.fit_tree = {}
         self.bins = bins
         self.fit_thresholds = None
+        self.criterion = criterion
 
     def __str__(self) -> str:
         return f'MyTreeClf class: max_depth={self.max_depth}, min_samples_split={self.min_samples_split}, max_leafs={self.max_leafs}'
@@ -73,7 +74,8 @@ class MyTreeClf():
             self.print_tree(node['right'], indent + "    ")
 
     def _fit(self, X: pd.DataFrame, y: pd.Series, current_depth: int) -> dict:
-        best_split = get_best_split(X, y, self.bins, self.fit_thresholds)
+        best_split = get_best_split(
+            self.criterion, X, y, self.bins, self.fit_thresholds)
 
         if best_split[0] is None:
             self.leafs_cnt += 1
@@ -138,15 +140,26 @@ def get_thresholds(col, x_feature: pd.Series, bins, fit_thresholds):
     return (thresholds, True)
 
 
-def get_best_split(X: pd.DataFrame, y: pd.Series, bins, fit_thresholds):
-
-    def _get_s_entropy(y: pd.Series) -> float:
+def calc_fit_func(criterion: str, y: pd.Series) -> float:
+    if criterion == 'entropy':
         classes_probability = y.value_counts() / len(y)
         entropy = -np.sum(classes_probability *
                           np.log2(classes_probability))
         return entropy
+    else:
+        return 1 - np.sum((y.value_counts() / len(y)) ** 2)
 
-    s0 = _get_s_entropy(y)
+
+def calc_split_fit_func(criterion: str, source_func_val: float, y: pd.Series, y_left: pd.Series, y_right: pd.Series) -> float:
+    if criterion == 'entropy':
+        return source_func_val - (len(y_left) / len(y)) * calc_fit_func(criterion, y_left) - (len(y_right) / len(y)) * calc_fit_func(criterion, y_right)
+    else:
+        return source_func_val - (len(y_left) / len(y)) * calc_fit_func(criterion, y_left) - (len(y_right) / len(y)) * calc_fit_func(criterion, y_right)
+
+
+def get_best_split(criterion: str, X: pd.DataFrame, y: pd.Series, bins, fit_thresholds):
+
+    s0 = calc_fit_func(criterion, y)
     result_col = None
     result_split_value = 0
     result_ig = 0
@@ -167,11 +180,11 @@ def get_best_split(X: pd.DataFrame, y: pd.Series, bins, fit_thresholds):
             y_left = y[mask]
             y_right = y[~mask]
 
-            buff_entroy = s0 - (len(y_left) / len(y)) * _get_s_entropy(
-                y_left) - (len(y_right) / len(y)) * _get_s_entropy(y_right)
+            buff_entropy = calc_split_fit_func(
+                criterion, s0, y, y_left, y_right)
 
-            if buff_entroy > result_ig:
-                result_ig = buff_entroy
+            if buff_entropy > result_ig:
+                result_ig = buff_entropy
                 result_col = col
                 result_split_value = threshold
 
