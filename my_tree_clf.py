@@ -14,7 +14,7 @@ class MyTreeClf():
 
         self.fit_tree = {}
         self.bins = bins
-        self.histogram_thresholds = None
+        self.fit_thresholds = None
 
     def __str__(self) -> str:
         return f'MyTreeClf class: max_depth={self.max_depth}, min_samples_split={self.min_samples_split}, max_leafs={self.max_leafs}'
@@ -45,12 +45,18 @@ class MyTreeClf():
             return self._predict_proba_series(item, node['left'])
 
     def fit(self, X: pd.DataFrame, y: pd.Series):
-        if self.bins:
-            self.histogram_thresholds = {}
+        if self.bins and len(X) - 1 > self.bins - 1:
+            self.fit_thresholds = {}
             for col in X.columns:
                 _, thresholds = np.histogram(X[col], bins=self.bins)
                 thresholds = thresholds[1:-1]
-                self.histogram_thresholds[col] = thresholds
+                self.fit_thresholds[col] = thresholds
+        else:
+            self.fit_thresholds = {}
+            for col in X.columns:
+                sorted_values = X[col].sort_values().unique()
+                thresholds = (sorted_values[1:] + sorted_values[:-1]) / 2
+                self.fit_thresholds[col] = thresholds
 
         self.fit_tree = self._fit(X, y, 0)
 
@@ -67,7 +73,7 @@ class MyTreeClf():
             self.print_tree(node['right'], indent + "    ")
 
     def _fit(self, X: pd.DataFrame, y: pd.Series, current_depth: int) -> dict:
-        best_split = get_best_split(X, y, self.bins, self.histogram_thresholds)
+        best_split = get_best_split(X, y, self.bins, self.fit_thresholds)
 
         if best_split[0] is None:
             self.leafs_cnt += 1
@@ -119,26 +125,20 @@ class MyTreeClf():
         return depth < self.max_depth and self.potential_leafs_cnt <= self.max_leafs and self.min_samples_split <= items_count
 
 
-def get_thresholds(col, x_feature: pd.Series, bins, histogram_thresholds):
-    if not bins or len(x_feature) - 1 < bins - 1:
-        sorted_values = x_feature.sort_values().unique()
-        thresholds = (sorted_values[1:] + sorted_values[:-1]) / 2
-        is_leaf = False
-        return (thresholds, is_leaf)
-    else:
-        thresholds = histogram_thresholds[col]
-        max = x_feature.max()
-        min = x_feature.min()
+def get_thresholds(col, x_feature: pd.Series, bins, fit_thresholds):
+    thresholds = fit_thresholds[col]
+    max = x_feature.max()
+    min = x_feature.min()
 
-        thresholds = [th for th in thresholds if th >= min and th < max]
+    thresholds = [th for th in thresholds if th >= min and th < max]
 
-        if len(thresholds) > 0:
-            return (thresholds, False)
+    if len(thresholds) > 0:
+        return (thresholds, False)
 
-        return (thresholds, True)
+    return (thresholds, True)
 
 
-def get_best_split(X: pd.DataFrame, y: pd.Series, bins, histogram_thresholds):
+def get_best_split(X: pd.DataFrame, y: pd.Series, bins, fit_thresholds):
 
     def _get_s_entropy(y: pd.Series) -> float:
         classes_probability = y.value_counts() / len(y)
@@ -157,7 +157,7 @@ def get_best_split(X: pd.DataFrame, y: pd.Series, bins, histogram_thresholds):
 
     for col in X.columns:
         thresholds_result = get_thresholds(
-            col, X[col], bins, histogram_thresholds)
+            col, X[col], bins, fit_thresholds)
 
         if thresholds_result[1]:
             continue
