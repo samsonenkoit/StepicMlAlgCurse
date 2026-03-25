@@ -16,6 +16,8 @@ class MyTreeClf():
         self.bins = bins
         self.fit_thresholds = None
         self.criterion = criterion
+        self.fi = {}
+        self._source_dataset_len = 0
 
     def __str__(self) -> str:
         return f'MyTreeClf class: max_depth={self.max_depth}, min_samples_split={self.min_samples_split}, max_leafs={self.max_leafs}'
@@ -46,6 +48,11 @@ class MyTreeClf():
             return self._predict_proba_series(item, node['left'])
 
     def fit(self, X: pd.DataFrame, y: pd.Series):
+
+        self._source_dataset_len = len(X)
+        for col in X.columns:
+            self.fi[col] = 0
+
         if self.bins and len(X) - 1 > self.bins - 1:
             self.fit_thresholds = {}
             for col in X.columns:
@@ -83,7 +90,8 @@ class MyTreeClf():
             self.leafs_sum += buff_p
             return {
                 'type': 'leaf',
-                'probability': buff_p
+                'probability': buff_p,
+                'ig': best_split[2]
             }
 
         mask = X[best_split[0]] > best_split[1]
@@ -93,7 +101,8 @@ class MyTreeClf():
         node = {
             'type': 'node',
             'col': best_split[0],
-            'threshold': best_split[1]
+            'threshold': best_split[1],
+            'ig': best_split[2]
         }
 
         current_depth += 1
@@ -104,7 +113,8 @@ class MyTreeClf():
         else:
             node['left'] = {
                 'type': 'leaf',
-                'probability': (y_left == 1).sum() / len(y_left)
+                'probability': (y_left == 1).sum() / len(y_left),
+                'ig': calc_fit_func(self.criterion, y_right)
             }
             self.leafs_cnt += 1
             self.leafs_sum += node['left']['probability']
@@ -116,10 +126,14 @@ class MyTreeClf():
         else:
             node['right'] = {
                 'type': 'leaf',
-                'probability': (y_right == 1).sum() / len(y_right)
+                'probability': (y_right == 1).sum() / len(y_right),
+                'ig': calc_fit_func(self.criterion, y_right)
             }
             self.leafs_cnt += 1
             self.leafs_sum += node['right']['probability']
+
+        self.fi[node['col']] += (len(y) /
+                                 self._source_dataset_len) * node['ig']
 
         return node
 
